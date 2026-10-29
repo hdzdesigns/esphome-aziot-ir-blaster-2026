@@ -1,0 +1,149 @@
+# ==============================================================
+# Aziot IR Blaster (Type-C) 2026 Version
+# Base configuration for Beken BK72xx (t1-3s)
+# ==============================================================
+
+esphome:
+  name: aziot-ir-blaster-2026
+  friendly_name: Aziot IR Blaster
+
+# Board definition for the Beken chip
+bk72xx:
+  board: t1-3s
+
+preferences:
+  flash_write_interval: 1min
+
+logger:
+  level: DEBUG
+  tx_buffer_size: 2048
+
+# ==============================================================
+# CORE INTEGRATIONS (Home Assistant, Wi-Fi, OTA)
+# Make sure to define these values in your secrets.yaml file!
+# ==============================================================
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Fallback access point if the device cannot connect to Wi-Fi
+  ap:
+    ssid: IR Blaster AP
+    password: !secret ap_password
+
+captive_portal:
+
+web_server:
+  port: 80
+
+# ==============================================================
+# BLUETOOTH (Optional)
+# Uncomment these lines to use this device as a Bluetooth Proxy
+# for Home Assistant to detect nearby BLE devices.
+# ==============================================================
+# bk72xx_ble:
+# bk72xx_ble_tracker:
+# bluetooth_proxy:
+#   active: false
+
+# ==============================================================
+# SYSTEM & HARDWARE SENSORS
+# ==============================================================
+text_sensor:
+  - platform: libretiny
+    version:
+      name: "LibreTiny Version"
+
+# Single-color Status LED (wfst_pin: P24)
+light:
+  - platform: status_led
+    name: "Board Status LED"
+    id: board_status_led
+    pin:
+      number: P24
+      inverted: true
+
+# Physical Pair/Reset Microswitch (reset_pin: P9)
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: P9
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Hardware Button"
+    id: hw_button
+
+# ==============================================================
+# INFRARED RECEIVER (RX)
+# ==============================================================
+remote_receiver:
+  - id: ir_rx
+    pin:
+      number: P26
+      mode: INPUT_PULLUP
+      inverted: true
+    # ----------------------------------------------------------
+    # UNCOMMENT the 'dump: [raw]' line below when you want to 
+    # point a remote at the device to learn new IR codes. 
+    # RE-COMMENT it when done to prevent log spam from sunlight.
+    # ----------------------------------------------------------
+    # dump: [raw] 
+    tolerance: 30%
+    filter: 500us
+    idle: 20ms
+
+# ==============================================================
+# INFRARED TRANSMITTER (TX)
+# ==============================================================
+remote_transmitter:
+  - id: ir_tx
+    pin:
+      number: P6
+    carrier_duty_percent: 50%
+
+# --------------------------------------------------------------
+# NOTE: The 'ir_rf_proxy' platform requires a custom component. 
+# It is commented out here so the base file compiles for standard 
+# ESPHome users. If you are using a specific external_component 
+# for this, declare it at the top of the file and uncomment below.
+# --------------------------------------------------------------
+# infrared:
+#   - platform: ir_rf_proxy
+#     name: "Aziot IR Transmitter Proxy"
+#     id: ir_proxy_tx
+#     remote_transmitter_id: ir_tx
+#
+#   - platform: ir_rf_proxy
+#     name: "Aziot IR Receiver Proxy"
+#     id: ir_proxy_rx
+#     remote_receiver_id: ir_rx
+
+# ==============================================================
+# CUSTOM IR COMMANDS (Example)
+# Users can copy this block and paste their decoded IR codes 
+# to create buttons in Home Assistant that blast signals.
+# ==============================================================
+# button:
+#   - platform: template
+#     name: "Turn On TV Example"
+#     on_press:
+#       - remote_transmitter.transmit_nec:
+#           address: 0x0000
+#           command: 0x0000
+
+# ==============================================================
+# DEVICE MANAGEMENT
+# ==============================================================
+button:
+  - platform: restart
+    id: restart_button
+    name: "Restart Device"
+    entity_category: config
+    icon: "mdi:restart"
